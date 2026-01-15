@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Draw to G-Code</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
+        #canvas { border: 2px solid #333; background: white; cursor: crosshair; touch-action: none; }
+        .controls { margin: 20px; }
+        #terminal { background: #222; color: #0f0; padding: 10px; height: 150px; overflow-y: scroll; text-align: left; margin: 10px auto; width: 500px; font-family: monospace; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Sketch to G-Code</h1>
+    <button id="connect" style="background: #4CAF50; color: white;">1. Connect Hardware</button>
+    <button id="clear">Clear Canvas</button>
+    
+    <div class="controls">
+        <canvas id="canvas" width="500" height="400"></canvas>
+    </div>
+
+    <button id="send" style="background: #2196F3; color: white;">2. Send Drawing to Arduino</button>
+    <div id="terminal"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const term = document.getElementById('terminal');
+        let drawing = false;
+        let points = []; // Stores the path coordinates
+        let port, writer;
+
+        // --- Drawing Logic ---
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+
+        function startDrawing(e) {
+            drawing = true;
+            const pt = { x: e.offsetX, y: e.offsetY, type: 'move' };
+            points.push(pt);
+            ctx.beginPath();
+            ctx.moveTo(pt.x, pt.y);
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+            const pt = { x: e.offsetX, y: e.offsetY, type: 'line' };
+            points.push(pt);
+            ctx.lineTo(pt.x, pt.y);
+            ctx.stroke();
+        }
+
+        function stopDrawing() { drawing = false; }
+
+        document.getElementById('clear').onclick = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            points = [];
+            log("Canvas cleared.");
+        };
+
+        // --- Serial Logic ---
+        document.getElementById('connect').onclick = async () => {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                writer = port.writable.getWriter();
+                log("Connected to hardware!");
+            } catch (err) { log("Error: " + err); }
+        };
+
+        // --- Convert Points to G-Code & Send ---
+        document.getElementById('send').onclick = async () => {
+            if (!writer) return alert("Please connect first!");
+            if (points.length === 0) return alert("Draw something first!");
+
+            const encoder = new TextEncoder();
+            log("Sending G-Code...");
+
+            for (let pt of points) {
+                // Invert Y because canvas (0,0) is top-left, but CNCs usually use bottom-left
+                let gcode = "";
+                if (pt.type === 'move') {
+                    gcode = `G0 X${pt.x} Y${400 - pt.y}\n`; // Rapid move to start
+                } else {
+                    gcode = `G1 X${pt.x} Y${400 - pt.y} F3000\n`; // Draw line
+                }
+                
+                await writer.write(encoder.encode(gcode));
+                // Small delay to prevent overflowing the Arduino buffer
+                await new Promise(r => setTimeout(r, 20)); 
+            }
+            log("Finished sending shape.");
+        };
+
+        function log(msg) {
+            term.innerHTML += msg + "<br>";
+            term.scrollTop = term.scrollHeight;
+        }
+    </script>
+</body>
+</html>
