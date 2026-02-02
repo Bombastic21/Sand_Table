@@ -1,102 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Draw to G-Code</title>
+    <title>Sand Table G-Code Gen</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
-        #canvas { border: 2px solid #333; background: white; cursor: crosshair; touch-action: none; }
-        .controls { margin: 20px; }
-        #terminal { background: #222; color: #0f0; padding: 10px; height: 150px; overflow-y: scroll; text-align: left; margin: 10px auto; width: 500px; font-family: monospace; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 5px; }
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        h1 {
+            font-size: 60px;
+            text-align: center;
+            margin: 30px 0;
+            color: #333;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 0;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            background-color: #3498db;
+            color: white;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        .button-icon {
+            font-size: 60px;
+        }
+
+        .button-text {
+            font-weight: bold;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <h1>Sketch to G-Code</h1>
-    <button id="connect" style="background: #4CAF50; color: white;">1. Connect Hardware</button>
-    <button id="clear">Clear Canvas</button>
-    
-    <div class="controls">
-        <canvas id="canvas" width="500" height="400"></canvas>
+    <h1>Sand Table</h1>
+
+    <div class="button-container">
+        <button onclick="window.location.href='draw.html'">
+            <div class="button-icon">✏️</div>
+            <div class="button-text">Draw</div>
+        </button>
+        <button onclick="window.location.href='patterns.html'">
+            <div class="button-icon">🌀</div>
+            <div class="button-text">Patterns</div>
+        </button>
+        <button onclick="window.location.href='upload.html'">
+            <div class="button-icon">🖼️</div>
+            <div class="button-text">Image</div>
+        </button>
     </div>
-
-    <button id="send" style="background: #2196F3; color: white;">2. Send Drawing to Arduino</button>
-    <div id="terminal"></div>
-
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const term = document.getElementById('terminal');
-        let drawing = false;
-        let points = []; // Stores the path coordinates
-        let port, writer;
-
-        // --- Drawing Logic ---
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-
-        function startDrawing(e) {
-            drawing = true;
-            const pt = { x: e.offsetX, y: e.offsetY, type: 'move' };
-            points.push(pt);
-            ctx.beginPath();
-            ctx.moveTo(pt.x, pt.y);
-        }
-
-        function draw(e) {
-            if (!drawing) return;
-            const pt = { x: e.offsetX, y: e.offsetY, type: 'line' };
-            points.push(pt);
-            ctx.lineTo(pt.x, pt.y);
-            ctx.stroke();
-        }
-
-        function stopDrawing() { drawing = false; }
-
-        document.getElementById('clear').onclick = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            points = [];
-            log("Canvas cleared.");
-        };
-
-        // --- Serial Logic ---
-        document.getElementById('connect').onclick = async () => {
-            try {
-                port = await navigator.serial.requestPort();
-                await port.open({ baudRate: 115200 });
-                writer = port.writable.getWriter();
-                log("Connected to hardware!");
-            } catch (err) { log("Error: " + err); }
-        };
-
-        // --- Convert Points to G-Code & Send ---
-        document.getElementById('send').onclick = async () => {
-            if (!writer) return alert("Please connect first!");
-            if (points.length === 0) return alert("Draw something first!");
-
-            const encoder = new TextEncoder();
-            log("Sending G-Code...");
-
-            for (let pt of points) {
-                // Invert Y because canvas (0,0) is top-left, but CNCs usually use bottom-left
-                let gcode = "";
-                if (pt.type === 'move') {
-                    gcode = `G0 X${pt.x} Y${400 - pt.y}\n`; // Rapid move to start
-                } else {
-                    gcode = `G1 X${pt.x} Y${400 - pt.y} F3000\n`; // Draw line
-                }
-                
-                await writer.write(encoder.encode(gcode));
-                // Small delay to prevent overflowing the Arduino buffer
-                await new Promise(r => setTimeout(r, 20)); 
-            }
-            log("Finished sending shape.");
-        };
-
-        function log(msg) {
-            term.innerHTML += msg + "<br>";
-            term.scrollTop = term.scrollHeight;
-        }
-    </script>
 </body>
 </html>
