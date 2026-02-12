@@ -144,6 +144,7 @@
         }
     </style>
 </head>
+
 <body>
     <h1>Upload Image to G-Code</h1>
     <p style="color: #666; margin: 0 0 20px 0;">Sand Table: 180mm × 180mm</p>
@@ -196,221 +197,223 @@
     <textarea id="gcodePreview" readonly></textarea>
 
     <script>
-        const imageInput = document.getElementById('imageInput');
-        const thresholdSlider = document.getElementById('thresholdSlider');
-        const thresholdValue = document.getElementById('thresholdValue');
-        const invertCheckbox = document.getElementById('invertCheckbox');
-        const convertBtn = document.getElementById('convertBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const backBtn = document.getElementById('backBtn');
-        const previewCanvas = document.getElementById('previewCanvas');
-        const ctx = previewCanvas.getContext('2d');
-        const imagePreviewCanvas = document.getElementById('imagePreviewCanvas');
-        const imagePreviewCtx = imagePreviewCanvas.getContext('2d');
-        const gcodePathCanvas = document.getElementById('gcodePathCanvas');
-        const gcodePathCtx = gcodePathCanvas.getContext('2d');
-        const gcodePreview = document.getElementById('gcodePreview');
+    const imageInput = document.getElementById('imageInput');
+    const thresholdSlider = document.getElementById('thresholdSlider');
+    const thresholdValue = document.getElementById('thresholdValue');
+    const invertCheckbox = document.getElementById('invertCheckbox');
+    const convertBtn = document.getElementById('convertBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const backBtn = document.getElementById('backBtn');
+    const previewCanvas = document.getElementById('previewCanvas');
+    const ctx = previewCanvas.getContext('2d');
+    const imagePreviewCanvas = document.getElementById('imagePreviewCanvas');
+    const imagePreviewCtx = imagePreviewCanvas.getContext('2d');
+    const gcodePathCanvas = document.getElementById('gcodePathCanvas');
+    const gcodePathCtx = gcodePathCanvas.getContext('2d');
+    const gcodePreview = document.getElementById('gcodePreview');
 
-        let currentImageData = null;
-        let generatedGCode = '';
-        let currentImage = null;
+    let currentImageData = null;
+    let generatedGCode = '';
 
-        previewCanvas.width = 500;
-        previewCanvas.height = 500;
+    thresholdSlider.addEventListener('input', (e) => {
+        thresholdValue.textContent = e.target.value;
+    });
 
-        thresholdSlider.addEventListener('input', (e) => {
-            thresholdValue.textContent = e.target.value;
-        });
+    imageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-        imageInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                // 1. Set canvas size to match image
+                previewCanvas.width = img.width;
+                previewCanvas.height = img.height;
 
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const img = new Image();
-                img.onload = () => {
-                    currentImage = img;
-                    
-                    // Store the actual image dimensions
-                    const actualWidth = img.width;
-                    const actualHeight = img.height;
-                    
-                    // Create a canvas with actual image dimensions (not padded)
-                    previewCanvas.width = actualWidth;
-                    previewCanvas.height = actualHeight;
-                    
-                    ctx.drawImage(img, 0, 0);
-                    previewCanvas.classList.add('active');
-                    currentImageData = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
-                    
-                    // Draw image to small preview canvas
-                    imagePreviewCtx.drawImage(img, 0, 0, imagePreviewCanvas.width, imagePreviewCanvas.height);
-                    imagePreviewCanvas.style.display = 'block';
-                };
-                img.src = event.target.result;
+                // 2. CRITICAL FIX: Fill canvas with WHITE first
+                // This prevents transparent backgrounds from being read as black (drawing zones)
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+                // 3. Draw the image on top of the white background
+                ctx.drawImage(img, 0, 0);
+                
+                // 4. Update preview
+                previewCanvas.classList.add('active');
+                currentImageData = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
+                
+                imagePreviewCtx.fillStyle = "#FFFFFF";
+                imagePreviewCtx.fillRect(0, 0, imagePreviewCanvas.width, imagePreviewCanvas.height);
+                imagePreviewCtx.drawImage(img, 0, 0, imagePreviewCanvas.width, imagePreviewCanvas.height);
+                imagePreviewCanvas.style.display = 'block';
             };
-            reader.readAsDataURL(file);
-        });
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
 
-        convertBtn.addEventListener('click', () => {
-            if (!currentImageData) {
-                alert('Please upload an image first!');
-                return;
-            }
+    convertBtn.addEventListener('click', () => {
+        if (!currentImageData) {
+            alert('Please upload an image first!');
+            return;
+        }
+        const threshold = parseInt(thresholdSlider.value);
+        const invert = invertCheckbox.checked;
+        generatedGCode = imageToGCode(currentImageData, threshold, invert);
+        gcodePreview.value = generatedGCode;
+        gcodePreview.classList.add('active');
+        drawGCodePreview(generatedGCode);
+    });
 
-            const threshold = parseInt(thresholdSlider.value);
-            const invert = invertCheckbox.checked;
-            generatedGCode = imageToGCode(currentImageData, threshold, invert);
-            gcodePreview.value = generatedGCode;
-            gcodePreview.classList.add('active');
+    downloadBtn.addEventListener('click', () => {
+        if (!generatedGCode) return;
+        const filename = document.getElementById('filenameInput').value.trim() || 'image';
+        const element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(generatedGCode));
+        element.setAttribute('download', filename + '.gcode');
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+    });
+
+    backBtn.addEventListener('click', () => window.location.href = 'index.html');
+
+    function imageToGCode(imageData, threshold, invert = false) {
+    const width = imageData.width;
+    const height = imageData.height;
+    const data = imageData.data;
+    
+    // --- SETTINGS ---
+    const density = 100; // Target width in pixels (Lower = faster, Higher = more detail)
+    const tableSize = 180; // mm
+    const jumpThreshold = 3.0; // If gap is > 3mm, use the wall travel method
+    // ----------------
+    
+    let gcode = ['G90', 'G21', 'G1 F1500'];
+    
+    // 1. Collect all "draw points" (Black pixels)
+    let points = [];
+    const step = Math.max(1, Math.floor(width / density));
+    
+    const scaleX = tableSize / width;
+    const scaleY = tableSize / height;
+
+    for (let y = 0; y < height; y += step) {
+        for (let x = 0; x < width; x += step) {
+            const idx = (Math.floor(y) * width + Math.floor(x)) * 4;
+            const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
             
-            // Draw G-code path preview
-            drawGCodePreview(generatedGCode);
-        });
-
-        downloadBtn.addEventListener('click', () => {
-            if (!generatedGCode) {
-                alert('Please convert an image first!');
-                return;
-            }
-
-            const filename = document.getElementById('filenameInput').value.trim() || 'image';
-            const element = document.createElement('a');
-            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(generatedGCode));
-            element.setAttribute('download', filename + '.gcode');
-            element.style.display = 'none';
-            document.body.appendChild(element);
-            element.click();
-            document.body.removeChild(element);
-        });
-
-        backBtn.addEventListener('click', () => {
-            window.location.href = 'index.html';
-        });
-
-        function imageToGCode(imageData, threshold, invert = false) {
-            const data = imageData.data;
-            const width = imageData.width;
-            const height = imageData.height;
-
-            let gcode = [];
-            gcode.push('G90'); // Absolute positioning
-            gcode.push('G21'); // Millimeters
-
-            // Scale factors to fit 180x180mm
-            const scaleX = 180 / width;
-            const scaleY = 180 / height;
-
-            // Create a binary image
-            const binaryImage = new Uint8Array(width * height);
-            for (let i = 0; i < width * height; i++) {
-                const brightness = (data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
-                let pixel;
-                if (invert) {
-                    pixel = brightness > threshold ? 1 : 0;
-                } else {
-                    pixel = brightness < threshold ? 1 : 0;
-                }
-                binaryImage[i] = pixel;
-            }
-
-            // Scan horizontally, only drawing on black pixels
-            const lineSpacing = 2;
+            // Check if this pixel is "Black" (or White if inverted)
+            const isTarget = invert ? (brightness > threshold) : (brightness < threshold);
             
-            for (let y = 0; y < height; y += lineSpacing) {
-                let segments = [];
-                let inSegment = false;
-                let segmentStart = 0;
-                
-                // Find continuous black segments
-                for (let x = 0; x < width; x++) {
-                    const idx = y * width + x;
-                    const pixel = binaryImage[idx];
-                    
-                    if (pixel === 1 && !inSegment) {
-                        inSegment = true;
-                        segmentStart = x;
-                    } else if (pixel === 0 && inSegment) {
-                        inSegment = false;
-                        segments.push({ start: segmentStart, end: x });
-                    }
-                }
-                
-                if (inSegment) {
-                    segments.push({ start: segmentStart, end: width });
-                }
-                
-                // Draw segments - G0 to start, G1 to draw through black
-                for (let seg of segments) {
-                    const x1 = seg.start * scaleX;
-                    const x2 = seg.end * scaleX;
-                    // Flip Y-axis: invert the image vertically
-                    const yMm = (height - y) * scaleY;
-                    
-                    // G0 = rapid move (no drawing)
-                    // G1 = drawing move
-                    gcode.push(`G0 X${x1.toFixed(2)} Y${yMm.toFixed(2)}`);
-                    gcode.push(`G1 X${x2.toFixed(2)} Y${yMm.toFixed(2)} F1000`);
-                }
+            if (isTarget) {
+                // Flip Y for Cartesian coordinates (0 at bottom)
+                points.push({
+                    x: x * scaleX,
+                    y: (height - y) * scaleY,
+                    visited: false
+                });
             }
+        }
+    }
 
-            gcode.push('G0 X0 Y0'); // Return to origin
-            gcode.push('M30'); // End of program
+    // 2. Connect the dots (Greedy Nearest Neighbor)
+    let currentX = 0;
+    let currentY = 180; // Start at Home (Top-Left usually)
+    let pointsRemaining = points.length;
 
-            return gcode.join('\n');
+    // Optimization: processing thousands of points can be slow.
+    // We loop until all points are visited.
+    while (pointsRemaining > 0) {
+        let minDist = Infinity;
+        let nearestIdx = -1;
+
+        // Find the closest unvisited point
+        // (Simple optimization: don't search the whole array if we find something really close)
+        for (let i = 0; i < points.length; i++) {
+            if (points[i].visited) continue;
+
+            const dx = points[i].x - currentX;
+            const dy = points[i].y - currentY;
+            const distSq = dx*dx + dy*dy; // Use squared distance to avoid square roots (faster)
+
+            if (distSq < minDist) {
+                minDist = distSq;
+                nearestIdx = i;
+                // If we found a neighbor immediately next to us (< 2mm), take it instantly
+                if (distSq < 4) break; 
+            }
         }
 
-        function drawGCodePreview(gcode) {
-            gcodePathCtx.fillStyle = '#ffffff';
-            gcodePathCtx.fillRect(0, 0, gcodePathCanvas.width, gcodePathCanvas.height);
+        if (nearestIdx !== -1) {
+            const p = points[nearestIdx];
+            const dist = Math.sqrt(minDist);
 
-            const lines = gcode.split('\n');
-            let currentX = 0;
-            let currentY = 0;
-            
-            // Scale from mm to canvas pixels (180mm table to 250px canvas)
-            const scale = gcodePathCanvas.width / 180;
-
-            gcodePathCtx.strokeStyle = '#000000';
-            gcodePathCtx.lineWidth = 1;
-            gcodePathCtx.lineCap = 'round';
-            gcodePathCtx.lineJoin = 'round';
-
-            for (let line of lines) {
-                line = line.trim();
-                if (line.startsWith('G0')) {
-                    // Move (rapid)
-                    const match = line.match(/X([\d.-]+)\s+Y([\d.-]+)/);
-                    if (match) {
-                        currentX = parseFloat(match[1]);
-                        currentY = parseFloat(match[2]);
-                    }
-                } else if (line.startsWith('G1')) {
-                    // Line draw
-                    const match = line.match(/X([\d.-]+)\s+Y([\d.-]+)/);
-                    if (match) {
-                        const newX = parseFloat(match[1]);
-                        const newY = parseFloat(match[2]);
-                        
-                        const x1 = currentX * scale;
-                        const y1 = currentY * scale;
-                        const x2 = newX * scale;
-                        const y2 = newY * scale;
-                        
-                        gcodePathCtx.beginPath();
-                        gcodePathCtx.moveTo(x1, y1);
-                        gcodePathCtx.lineTo(x2, y2);
-                        gcodePathCtx.stroke();
-                        
-                        currentX = newX;
-                        currentY = newY;
-                    }
-                }
+            // 3. MOVEMENT LOGIC
+            if (dist > jumpThreshold) {
+                // If the next point is far away, it means we are jumping over whitespace.
+                // Go to the perimeter to hide the travel line.
+                
+                // A. Go to nearest wall from CURRENT position
+                let wallX = currentX > 90 ? 180 : 0;
+                gcode.push(`G1 X${wallX} Y${currentY.toFixed(2)}`);
+                
+                // B. Slide along wall to NEW Y height
+                gcode.push(`G1 X${wallX} Y${p.y.toFixed(2)}`);
+                
+                // C. Enter into the new shape
+                gcode.push(`G1 X${p.x.toFixed(2)} Y${p.y.toFixed(2)}`);
+            } else {
+                // If it's close, just draw straight to it (continuous filling)
+                gcode.push(`G1 X${p.x.toFixed(2)} Y${p.y.toFixed(2)}`);
             }
 
-            gcodePathCanvas.style.display = 'block';
+            // Update state
+            currentX = p.x;
+            currentY = p.y;
+            points[nearestIdx].visited = true;
+            pointsRemaining--;
+        } else {
+            break; // Should not happen if pointsRemaining > 0
         }
-    </script>
+    }
+
+    gcode.push('G1 X0 Y180'); // Go Home
+    gcode.push('M30');
+    
+    return gcode.join('\n');
+}
+
+    // --- PREVIEW FUNCTION (Unchanged but ensures clean clearing) ---
+    function drawGCodePreview(gcode) {
+        gcodePathCtx.fillStyle = '#FFFFFF';
+        gcodePathCtx.fillRect(0, 0, gcodePathCanvas.width, gcodePathCanvas.height);
+        
+        gcodePathCtx.strokeStyle = '#000000';
+        gcodePathCtx.lineWidth = 1;
+        gcodePathCtx.beginPath();
+
+        const lines = gcode.split('\n');
+        const scale = gcodePathCanvas.width / 180;
+        let curX = 0, curY = 0;
+
+        for (let line of lines) {
+            const match = line.match(/X([\d.-]+)\s+Y([\d.-]+)/);
+            if (match) {
+                const x = parseFloat(match[1]) * scale;
+                const y = parseFloat(match[2]) * scale; // Flip Y for canvas if needed, but 0,0 is usually top-left
+                if (line.includes('G1')) {
+                    gcodePathCtx.moveTo(curX, curY);
+                    gcodePathCtx.lineTo(x, y);
+                }
+                curX = x;
+                curY = y;
+            }
+        }
+        gcodePathCtx.stroke();
+        gcodePathCanvas.style.display = 'block';
+    }
+</script>
 </body>
 </html>
