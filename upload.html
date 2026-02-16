@@ -286,11 +286,11 @@
     
     // --- SETTINGS ---
     const density = 100; // Target width in pixels (Lower = faster, Higher = more detail)
-    const tableSize = 180; // mm
+    const tableSize = 370; // mm
     const jumpThreshold = 3.0; // If gap is > 3mm, use the wall travel method
     // ----------------
     
-    let gcode = ['G90', 'G21', 'G1 F1500'];
+    let gcode = ['G90', 'G21', 'G1 F1000'];
     
     // 1. Collect all "draw points" (Black pixels)
     let points = [];
