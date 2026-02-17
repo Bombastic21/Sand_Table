@@ -105,441 +105,424 @@
     <div class="pattern-grid" id="patternGrid"></div>
 
     <script>
+    // Configuration
+    const TABLE_SIZE = 370;
+    const CENTER = TABLE_SIZE / 2; // = 185
+    const MAX_R = CENTER - 10;     // = 175 (leaving 10mm buffer)
+    
         const patterns = [
-            {
-                name: "Spiral",
-                description: "A smooth spiral pattern",
-                generate: function() {
-                    let points = [];
-                    const centerX = 90, centerY = 90;
-                    const maxRadius = 80;
-                    for (let angle = 0; angle < Math.PI * 50; angle += 0.05) {
-                        const radius = (angle / (Math.PI * 50)) * maxRadius;
-                        const x = centerX + radius * Math.cos(angle);
-                        const y = centerY + radius * Math.sin(angle);
-                        points.push({ x, y });
-                    }
-                    return [points];
+    {
+        name: "Spiral",
+        description: "A smooth spiral pattern",
+        generate: function() {
+            let points = [];
+            const centerX = CENTER, centerY = CENTER;
+            const maxRadius = MAX_R;
+            // Increased loops slightly to fill the larger space
+            for (let angle = 0; angle < Math.PI * 60; angle += 0.05) {
+                const radius = (angle / (Math.PI * 60)) * maxRadius;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                points.push({ x, y });
+            }
+            return [points];
+        }
+    },
+    {
+        name: "Spirograph",
+        description: "Intricate Sisyphus-style loops",
+        generate: function() {
+            let points = [];
+            const centerX = CENTER, centerY = CENTER;
+            // Scaled up radii for 370mm table
+            const R = 150;  // Outer radius
+            const r = 92;   // Inner radius
+            const d = 50;   // Pen offset
+            
+            for (let t = 0; t < Math.PI * 60; t += 0.05) {
+                const x = centerX + (R - r) * Math.cos(t) + d * Math.cos(((R - r) / r) * t);
+                const y = centerY + (R - r) * Math.sin(t) - d * Math.sin(((R - r) / r) * t);
+                points.push({ x, y });
+            }
+            return [points];
+        }
+    },
+    {
+        name: "Grid",
+        description: "A geometric grid pattern",
+        generate: function() {
+            let strokes = [];
+            const spacing = 30; // Increased spacing for larger table
+            const start = 20;
+            const end = TABLE_SIZE - 20;
+            
+            // Horizontal lines
+            for (let y = start; y <= end; y += spacing) {
+                let stroke = [];
+                for (let x = start; x <= end; x += 5) {
+                    stroke.push({ x, y });
                 }
-            },
-            {
-                name: "Spirograph",
-                description: "Intricate Sisyphus-style loops",
-                generate: function() {
-                    let points = [];
-                    const centerX = 90, centerY = 90;
-                    const R = 80;  // Outer radius
-                    const r = 52;  // Inner radius
-                    const d = 30;  // Pen offset
-                    
-                    // High limit (60 * PI) ensures the pattern "closes" and creates many lines
-                    for (let t = 0; t < Math.PI * 60; t += 0.05) {
-                        const x = centerX + (R - r) * Math.cos(t) + d * Math.cos(((R - r) / r) * t);
-                        const y = centerY + (R - r) * Math.sin(t) - d * Math.sin(((R - r) / r) * t);
-                        points.push({ x, y });
-                    }
-                    return [points];
-    }
-},
-            {
-                name: "Grid",
-                description: "A geometric grid pattern",
-                generate: function() {
-                    let strokes = [];
-                    const spacing = 15;
-                    const start = 10;
-                    const end = 170;
-                    
-                    // Horizontal lines
-                    for (let y = start; y <= end; y += spacing) {
-                        let stroke = [];
-                        for (let x = start; x <= end; x += 5) {
-                            stroke.push({ x, y });
-                        }
-                        strokes.push(stroke);
-                    }
-                    
-                    // Vertical lines
-                    for (let x = start; x <= end; x += spacing) {
-                        let stroke = [];
-                        for (let y = start; y <= end; y += 5) {
-                            stroke.push({ x, y });
-                        }
-                        strokes.push(stroke);
-                    }
-                    return strokes;
+                strokes.push(stroke);
+            }
+            
+            // Vertical lines
+            for (let x = start; x <= end; x += spacing) {
+                let stroke = [];
+                for (let y = start; y <= end; y += 5) {
+                    stroke.push({ x, y });
                 }
-            },
-            {
-                name: "Circles",
-                description: "Concentric circles",
-                generate: function() {
-                    let strokes = [];
-                    const centerX = 90, centerY = 90;
-                    const radii = [20, 40, 60, 80];
-                    
-                    for (let radius of radii) {
-                        let stroke = [];
-                        for (let angle = 0; angle < Math.PI * 2; angle += 0.05) {
-                            const x = centerX + radius * Math.cos(angle);
-                            const y = centerY + radius * Math.sin(angle);
-                            stroke.push({ x, y });
-                        }
-                        strokes.push(stroke);
-                    }
-                    return strokes;
+                strokes.push(stroke);
+            }
+            return strokes;
+        }
+    },
+    {
+        name: "Circles",
+        description: "Concentric circles",
+        generate: function() {
+            let strokes = [];
+            const centerX = CENTER, centerY = CENTER;
+            // Added more circles and larger radii
+            const radii = [30, 60, 90, 120, 150];
+            
+            for (let radius of radii) {
+                let stroke = [];
+                for (let angle = 0; angle < Math.PI * 2; angle += 0.05) {
+                    const x = centerX + radius * Math.cos(angle);
+                    const y = centerY + radius * Math.sin(angle);
+                    stroke.push({ x, y });
                 }
-            },
-            {
-                name: "Wave",
-                description: "Flowing wave pattern",
-                generate: function() {
-                    let strokes = [];
-                    const amplitude = 40;
-                    const frequency = 0.05;
-                    
-                    for (let startY = 20; startY < 160; startY += 15) {
-                        let stroke = [];
-                        for (let x = 10; x < 170; x += 2) {
-                            const y = startY + amplitude * Math.sin(x * frequency);
-                            stroke.push({ x, y });
-                        }
-                        strokes.push(stroke);
+                strokes.push(stroke);
+            }
+            return strokes;
+        }
+    },
+    {
+        name: "Wave",
+        description: "Flowing wave pattern",
+        generate: function() {
+            let strokes = [];
+            const amplitude = 60; // Larger waves
+            const frequency = 0.03; // Smoother frequency
+            
+            // Covers the whole 370 height
+            for (let startY = 40; startY < TABLE_SIZE - 40; startY += 30) {
+                let stroke = [];
+                for (let x = 20; x < TABLE_SIZE - 20; x += 2) {
+                    const y = startY + amplitude * Math.sin(x * frequency);
+                    // Ensure we stay in bounds
+                    if (y > 0 && y < TABLE_SIZE) {
+                        stroke.push({ x, y });
                     }
-                    return strokes;
                 }
-            },
-            {
-                name: "Star",
-                description: "A geometric star shape",
-                generate: function() {
-                    let points = [];
-                    const centerX = 90, centerY = 90;
-                    const points_count = 5;
-                    const outerRadius = 70;
-                    const innerRadius = 30;
+                strokes.push(stroke);
+            }
+            return strokes;
+        }
+    },
+    {
+        name: "Star",
+        description: "A geometric star shape",
+        generate: function() {
+            let points = [];
+            const centerX = CENTER, centerY = CENTER;
+            const points_count = 5;
+            const outerRadius = MAX_R - 10; // 165mm
+            const innerRadius = 60;         // Scaled up
+            
+            for (let i = 0; i < points_count * 2; i++) {
+                const angle = (i * Math.PI) / points_count - Math.PI / 2;
+                const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                points.push({ x, y });
+            }
+            points.push(points[0]); // Close the star
+            return [points];
+        }
+    },
+    {
+        name: "Mandala",
+        description: "Decorative mandala pattern",
+        generate: function() {
+            let strokes = [];
+            const centerX = CENTER, centerY = CENTER;
+            
+            for (let layer = 1; layer <= 4; layer++) {
+                const radius = layer * 35; // Increased spacing
+                const petals = layer * 4;  // More petals
+                
+                for (let petal = 0; petal < petals; petal++) {
+                    let stroke = [];
+                    const baseAngle = (petal * Math.PI * 2) / petals;
                     
-                    for (let i = 0; i < points_count * 2; i++) {
-                        const angle = (i * Math.PI) / points_count - Math.PI / 2;
-                        const radius = i % 2 === 0 ? outerRadius : innerRadius;
-                        const x = centerX + radius * Math.cos(angle);
-                        const y = centerY + radius * Math.sin(angle);
-                        points.push({ x, y });
+                    for (let angle = baseAngle; angle < baseAngle + Math.PI / petals; angle += 0.05) {
+                        const r = radius * Math.sin(angle - baseAngle) / Math.sin(Math.PI / petals);
+                        const x = centerX + r * Math.cos(angle);
+                        const y = centerY + r * Math.sin(angle);
+                        stroke.push({ x, y });
                     }
-                    points.push(points[0]); // Close the star
-                    return [points];
-                }
-            },
-            {
-                name: "Mandala",
-                description: "Decorative mandala pattern",
-                generate: function() {
-                    let strokes = [];
-                    const centerX = 90, centerY = 90;
-                    
-                    for (let layer = 1; layer <= 4; layer++) {
-                        const radius = layer * 20;
-                        const petals = layer * 3;
-                        
-                        for (let petal = 0; petal < petals; petal++) {
-                            let stroke = [];
-                            const baseAngle = (petal * Math.PI * 2) / petals;
-                            
-                            for (let angle = baseAngle; angle < baseAngle + Math.PI / petals; angle += 0.05) {
-                                const r = radius * Math.sin(angle - baseAngle) / Math.sin(Math.PI / petals);
-                                const x = centerX + r * Math.cos(angle);
-                                const y = centerY + r * Math.sin(angle);
-                                stroke.push({ x, y });
-                            }
-                            strokes.push(stroke);
-                        }
-                    }
-                    return strokes;
-                }
-            },
-            {
-                name: "Cross",
-                description: "Christian cross pattern with thickness",
-                generate: function() {
-                    let strokes = [];
-                    
-                    // Vertical bar dimensions
-                    const verticalLeft = 80;
-                    const verticalRight = 100;
-                    const verticalTop = 10;
-                    const verticalBottom = 170;
-                    
-                    // Horizontal bar dimensions
-                    const horizontalLeft = 40;
-                    const horizontalRight = 140;
-                    const horizontalTop = 50;
-                    const horizontalBottom = 70;
-                    
-                    // One continuous outline
-                    let outline = [];
-                    
-                    // Top of vertical bar
-                    for (let x = verticalLeft; x <= verticalRight; x += 2) {
-                        outline.push({ x, y: verticalTop });
-                    }
-                    
-                    // Right side of vertical bar to horizontal intersection
-                    for (let y = verticalTop; y <= horizontalTop; y += 2) {
-                        outline.push({ x: verticalRight, y });
-                    }
-                    
-                    // Right side of horizontal bar
-                    for (let x = verticalRight; x <= horizontalRight; x += 2) {
-                        outline.push({ x, y: horizontalTop });
-                    }
-                    
-                    // Right vertical of horizontal bar
-                    for (let y = horizontalTop; y <= horizontalBottom; y += 2) {
-                        outline.push({ x: horizontalRight, y });
-                    }
-                    
-                    // Bottom of horizontal bar
-                    for (let x = horizontalRight; x >= verticalRight; x -= 2) {
-                        outline.push({ x, y: horizontalBottom });
-                    }
-                    
-                    // Right side of vertical bar bottom
-                    for (let y = horizontalBottom; y <= verticalBottom; y += 2) {
-                        outline.push({ x: verticalRight, y });
-                    }
-                    
-                    // Bottom of vertical bar
-                    for (let x = verticalRight; x >= verticalLeft; x -= 2) {
-                        outline.push({ x, y: verticalBottom });
-                    }
-                    
-                    // Left side of vertical bar bottom
-                    for (let y = verticalBottom; y >= horizontalBottom; y -= 2) {
-                        outline.push({ x: verticalLeft, y });
-                    }
-                    
-                    // Bottom of horizontal bar left side
-                    for (let x = verticalLeft; x >= horizontalLeft; x -= 2) {
-                        outline.push({ x, y: horizontalBottom });
-                    }
-                    
-                    // Left side of horizontal bar
-                    for (let y = horizontalBottom; y >= horizontalTop; y -= 2) {
-                        outline.push({ x: horizontalLeft, y });
-                    }
-                    
-                    // Top of horizontal bar left side
-                    for (let x = horizontalLeft; x <= verticalLeft; x += 2) {
-                        outline.push({ x, y: horizontalTop });
-                    }
-                    
-                    // Left side of vertical bar top
-                    for (let y = horizontalTop; y >= verticalTop; y -= 2) {
-                        outline.push({ x: verticalLeft, y });
-                    }
-                    
-                    strokes.push(outline);
-                    return strokes;
-                }
-            },
-            {
-                name: "Reset",
-                description: "Parallel lines to smooth the sand",
-                generate: function() {
-                    let strokes = [];
-                    const lineSpacing = 3; // 3mm spacing
-                    
-                    // Generate horizontal lines across entire table
-                    for (let y = 0; y <= 180; y += lineSpacing) {
-                        let line = [];
-                        for (let x = 0; x <= 180; x += 1) {
-                            line.push({ x, y });
-                        }
-                        strokes.push(line);
-                    }
-                    
-                    return strokes;
-                }
-            },
-            {
-                name: "Sunburst",
-                description: "Radial lines emanating from center",
-                generate: function() {
-                    let strokes = [];
-                    const centerX = 90, centerY = 90;
-                    const numRays = 16;
-                    const radius = 80;
-                    
-                    for (let i = 0; i < numRays; i++) {
-                        const angle = (i * Math.PI * 2) / numRays;
-                        let ray = [];
-                        for (let r = 0; r <= radius; r += 2) {
-                            const x = centerX + r * Math.cos(angle);
-                            const y = centerY + r * Math.sin(angle);
-                            ray.push({ x, y });
-                        }
-                        strokes.push(ray);
-                    }
-                    
-                    return strokes;
-                }
-            },
-            {
-                name: "Concentric Squares",
-                description: "Nested square patterns",
-                generate: function() {
-                    let strokes = [];
-                    const centerX = 90, centerY = 90;
-                    const squareSizes = [20, 40, 60, 80];
-                    
-                    for (let size of squareSizes) {
-                        let square = [];
-                        // Top line
-                        for (let x = centerX - size; x <= centerX + size; x += 2) {
-                            square.push({ x, y: centerY - size });
-                        }
-                        // Right line
-                        for (let y = centerY - size; y <= centerY + size; y += 2) {
-                            square.push({ x: centerX + size, y });
-                        }
-                        // Bottom line
-                        for (let x = centerX + size; x >= centerX - size; x -= 2) {
-                            square.push({ x, y: centerY + size });
-                        }
-                        // Left line
-                        for (let y = centerY + size; y >= centerY - size; y -= 2) {
-                            square.push({ x: centerX - size, y });
-                        }
-                        strokes.push(square);
-                    }
-                    
-                    return strokes;
-                }
-            },
-            {
-                name: "Hexagon",
-                description: "Regular hexagon pattern",
-                generate: function() {
-                    let strokes = [];
-                    const centerX = 90, centerY = 90;
-                    const radius = 70;
-                    let hex = [];
-                    
-                    for (let i = 0; i < 7; i++) {
-                        const angle = (i * Math.PI) / 3;
-                        const x = centerX + radius * Math.cos(angle);
-                        const y = centerY + radius * Math.sin(angle);
-                        hex.push({ x, y });
-                    }
-                    strokes.push(hex);
-                    
-                    return strokes;
-                }
-            },
-            {
-                name: "Diagonal Lines",
-                description: "Crisscross diagonal pattern",
-                generate: function() {
-                    let strokes = [];
-                    
-                    // Diagonal lines from top-left to bottom-right
-                    for (let offset = -180; offset <= 180; offset += 8) {
-                        let line = [];
-                        for (let x = 0; x <= 180; x += 2) {
-                            const y = x + offset;
-                            if (y >= 0 && y <= 180) {
-                                line.push({ x, y });
-                            }
-                        }
-                        if (line.length > 0) strokes.push(line);
-                    }
-                    
-                    // Diagonal lines from top-right to bottom-left
-                    for (let offset = 0; offset <= 360; offset += 8) {
-                        let line = [];
-                        for (let x = 0; x <= 180; x += 2) {
-                            const y = offset - x;
-                            if (y >= 0 && y <= 180) {
-                                line.push({ x, y });
-                            }
-                        }
-                        if (line.length > 0) strokes.push(line);
-                    }
-                    
-                    return strokes;
-                }
-            },
-            {
-                name: "Rose",
-                description: "Rose-shaped curve pattern",
-                generate: function() {
-                    let strokes = [];
-                    const centerX = 90, centerY = 90;
-                    const petals = 5;
-                    const scale = 30;
-                    let rose = [];
-                    
-                    for (let angle = 0; angle < Math.PI * 2; angle += 0.05) {
-                        const r = scale * Math.cos(petals * angle);
-                        if (r >= 0) {
-                            const x = centerX + r * Math.cos(angle);
-                            const y = centerY + r * Math.sin(angle);
-                            rose.push({ x, y });
-                        }
-                    }
-                    strokes.push(rose);
-                    
-                    return strokes;
-                }
-            },
-            {
-                name: "Checkerboard",
-                description: "Checkerboard grid pattern",
-                generate: function() {
-                    let strokes = [];
-                    const squareSize = 10;
-                    
-                    for (let y = 0; y < 180; y += squareSize) {
-                        // Horizontal lines
-                        let hLine = [];
-                        for (let x = 0; x <= 180; x += 2) {
-                            hLine.push({ x, y });
-                        }
-                        strokes.push(hLine);
-                    }
-                    
-                    for (let x = 0; x < 180; x += squareSize) {
-                        // Vertical lines
-                        let vLine = [];
-                        for (let y = 0; y <= 180; y += 2) {
-                            vLine.push({ x, y });
-                        }
-                        strokes.push(vLine);
-                    }
-                    
-                    return strokes;
-                }
-            },
-            {
-                name: "Infinity",
-                description: "Infinity symbol pattern",
-                generate: function() {
-                    let strokes = [];
-                    const centerX = 90, centerY = 90;
-                    let infinity = [];
-                    
-                    for (let t = 0; t < Math.PI * 2; t += 0.05) {
-                        const r = 50;
-                        const x = centerX + r * Math.cos(t) / (1 + Math.sin(t) * Math.sin(t));
-                        const y = centerY + r * Math.sin(t) * Math.cos(t) / (1 + Math.sin(t) * Math.sin(t));
-                        infinity.push({ x, y });
-                    }
-                    strokes.push(infinity);
-                    
-                    return strokes;
+                    strokes.push(stroke);
                 }
             }
-        ];
+            return strokes;
+        }
+    },
+    {
+        name: "Cross",
+        description: "Traditional Latin cross pattern",
+        generate: function() {
+            let strokes = [];
+            
+            // --- Configuration for 370x370 Table ---
+            const thick = 40;        // Thickness of the bars
+            const cx = CENTER;       // 185
+            
+            // Define fixed boundary lines to create the Latin Cross shape
+            // Top of the cross (near the top of table)
+            const vTop = 40;        
+            // Bottom of the cross (near bottom of table)
+            const vBottom = 330;    
+            
+            // The Horizontal Arm (Placed higher up at y=110 to y=150)
+            const hTop = 110;
+            const hBottom = hTop + thick;
+            const hLeft = 55;       // Left edge of arm
+            const hRight = 315;     // Right edge of arm
+
+            // The Vertical Bar Width
+            const vLeft = cx - (thick / 2);
+            const vRight = cx + (thick / 2);
+
+            let outline = [];
+
+            // 1. Top Edge
+            for (let x = vLeft; x <= vRight; x += 2) outline.push({ x, y: vTop });
+
+            // 2. Vertical Bar (Right Side - Top section)
+            for (let y = vTop; y <= hTop; y += 2) outline.push({ x: vRight, y });
+
+            // 3. Horizontal Arm (Right Arm - Top edge)
+            for (let x = vRight; x <= hRight; x += 2) outline.push({ x, y: hTop });
+
+            // 4. Horizontal Arm (Right Edge)
+            for (let y = hTop; y <= hBottom; y += 2) outline.push({ x: hRight, y });
+
+            // 5. Horizontal Arm (Right Arm - Bottom edge)
+            for (let x = hRight; x >= vRight; x -= 2) outline.push({ x, y: hBottom });
+
+            // 6. Vertical Bar (Right Side - Bottom section - The long part)
+            for (let y = hBottom; y <= vBottom; y += 2) outline.push({ x: vRight, y });
+
+            // 7. Bottom Edge
+            for (let x = vRight; x >= vLeft; x -= 2) outline.push({ x, y: vBottom });
+
+            // 8. Vertical Bar (Left Side - Bottom section)
+            for (let y = vBottom; y >= hBottom; y -= 2) outline.push({ x: vLeft, y });
+
+            // 9. Horizontal Arm (Left Arm - Bottom edge)
+            for (let x = vLeft; x >= hLeft; x -= 2) outline.push({ x, y: hBottom });
+
+            // 10. Horizontal Arm (Left Edge)
+            for (let y = hBottom; y >= hTop; y -= 2) outline.push({ x: hLeft, y });
+
+            // 11. Horizontal Arm (Left Arm - Top edge)
+            for (let x = hLeft; x <= vLeft; x += 2) outline.push({ x, y: hTop });
+
+            // 12. Vertical Bar (Left Side - Top section)
+            for (let y = hTop; y >= vTop; y -= 2) outline.push({ x: vLeft, y });
+
+            strokes.push(outline);
+            return strokes;
+        }
+    },
+    {
+        name: "Reset",
+        description: "Parallel lines to smooth the sand",
+        generate: function() {
+            let strokes = [];
+            const lineSpacing = 5; 
+            
+            // Generate horizontal lines across entire 370mm table
+            for (let y = 0; y <= TABLE_SIZE; y += lineSpacing) {
+                let line = [];
+                for (let x = 0; x <= TABLE_SIZE; x += 2) {
+                    line.push({ x, y });
+                }
+                strokes.push(line);
+            }
+            return strokes;
+        }
+    },
+    {
+        name: "Sunburst",
+        description: "Radial lines emanating from center",
+        generate: function() {
+            let strokes = [];
+            const centerX = CENTER, centerY = CENTER;
+            const numRays = 24; // More rays for bigger table
+            const radius = MAX_R;
+            
+            for (let i = 0; i < numRays; i++) {
+                const angle = (i * Math.PI * 2) / numRays;
+                let ray = [];
+                for (let r = 0; r <= radius; r += 2) {
+                    const x = centerX + r * Math.cos(angle);
+                    const y = centerY + r * Math.sin(angle);
+                    ray.push({ x, y });
+                }
+                strokes.push(ray);
+            }
+            return strokes;
+        }
+    },
+    {
+        name: "Concentric Squares",
+        description: "Nested square patterns",
+        generate: function() {
+            let strokes = [];
+            const centerX = CENTER, centerY = CENTER;
+            const squareSizes = [40, 80, 120, 160];
+            
+            for (let size of squareSizes) {
+                let square = [];
+                // Top
+                for (let x = centerX - size; x <= centerX + size; x += 2) 
+                    square.push({ x, y: centerY - size });
+                // Right
+                for (let y = centerY - size; y <= centerY + size; y += 2) 
+                    square.push({ x: centerX + size, y });
+                // Bottom
+                for (let x = centerX + size; x >= centerX - size; x -= 2) 
+                    square.push({ x, y: centerY + size });
+                // Left
+                for (let y = centerY + size; y >= centerY - size; y -= 2) 
+                    square.push({ x: centerX - size, y });
+                    
+                strokes.push(square);
+            }
+            return strokes;
+        }
+    },
+    {
+        name: "Hexagon",
+        description: "Regular hexagon pattern",
+        generate: function() {
+            let strokes = [];
+            const centerX = CENTER, centerY = CENTER;
+            const radius = 150; // Scaled up
+            let hex = [];
+            
+            for (let i = 0; i < 7; i++) {
+                const angle = (i * Math.PI) / 3;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                hex.push({ x, y });
+            }
+            strokes.push(hex);
+            return strokes;
+        }
+    },
+    {
+        name: "Diagonal Lines",
+        description: "Crisscross diagonal pattern",
+        generate: function() {
+            let strokes = [];
+            const spacing = 15;
+            
+            // Top-left to bottom-right
+            // Offset range increased for 370 table
+            for (let offset = -TABLE_SIZE; offset <= TABLE_SIZE; offset += spacing) {
+                let line = [];
+                for (let x = 0; x <= TABLE_SIZE; x += 5) {
+                    const y = x + offset;
+                    if (y >= 0 && y <= TABLE_SIZE) {
+                        line.push({ x, y });
+                    }
+                }
+                if (line.length > 0) strokes.push(line);
+            }
+            
+            // Top-right to bottom-left
+            for (let offset = 0; offset <= TABLE_SIZE * 2; offset += spacing) {
+                let line = [];
+                for (let x = 0; x <= TABLE_SIZE; x += 5) {
+                    const y = offset - x;
+                    if (y >= 0 && y <= TABLE_SIZE) {
+                        line.push({ x, y });
+                    }
+                }
+                if (line.length > 0) strokes.push(line);
+            }
+            return strokes;
+        }
+    },
+    {
+        name: "Rose",
+        description: "Rose-shaped curve pattern",
+        generate: function() {
+            let strokes = [];
+            const centerX = CENTER, centerY = CENTER;
+            const petals = 6;
+            const scale = 160; // Scale determines the radius
+            let rose = [];
+            
+            for (let angle = 0; angle < Math.PI * 2; angle += 0.02) {
+                const r = scale * Math.cos(petals * angle);
+                // Allow negative r for full rose loops
+                const x = centerX + r * Math.cos(angle);
+                const y = centerY + r * Math.sin(angle);
+                rose.push({ x, y });
+            }
+            strokes.push(rose);
+            return strokes;
+        }
+    },
+    {
+        name: "Checkerboard",
+        description: "Checkerboard grid pattern",
+        generate: function() {
+            let strokes = [];
+            const squareSize = 30; // Larger squares
+            
+            for (let y = 0; y < TABLE_SIZE; y += squareSize) {
+                let hLine = [];
+                for (let x = 0; x <= TABLE_SIZE; x += 2) {
+                    hLine.push({ x, y });
+                }
+                strokes.push(hLine);
+            }
+            
+            for (let x = 0; x < TABLE_SIZE; x += squareSize) {
+                let vLine = [];
+                for (let y = 0; y <= TABLE_SIZE; y += 2) {
+                    vLine.push({ x, y });
+                }
+                strokes.push(vLine);
+            }
+            return strokes;
+        }
+    },
+    {
+        name: "Infinity",
+        description: "Infinity symbol pattern",
+        generate: function() {
+            let strokes = [];
+            const centerX = CENTER, centerY = CENTER;
+            let infinity = [];
+            const size = 120; // Scale factor
+            
+            for (let t = 0; t < Math.PI * 2; t += 0.05) {
+                const scale = 2 / (3 - Math.cos(2*t));
+                const x = centerX + size * scale * Math.cos(t);
+                const y = centerY + size * scale * Math.sin(2*t) / 2;
+                infinity.push({ x, y });
+            }
+            strokes.push(infinity);
+            return strokes;
+        }
+    }
+];
 
         function drawPatternPreview(canvas, patternFunc) {
             const ctx = canvas.getContext('2d');
@@ -553,7 +536,7 @@
             ctx.lineJoin = 'round';
             
             // Scale to canvas size (180mm table to canvas)
-            const scale = canvas.width / 180;
+            const scale = canvas.width / 370;
             
             for (let stroke of strokes) {
                 if (stroke.length === 0) continue;
