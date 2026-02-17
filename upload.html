@@ -284,31 +284,30 @@
     const height = imageData.height;
     const data = imageData.data;
     
-    // --- SETTINGS ---
-    const density = 100; // Target width in pixels (Lower = faster, Higher = more detail)
-    const tableSize = 370; // mm
-    const jumpThreshold = 3.0; // If gap is > 3mm, use the wall travel method
-    // ----------------
+    // --- SETTINGS: ADJUST SIZE HERE ---
+    const tableWidth = 370;  // Change this to your X size
+    const tableHeight = 370; // Change this to your Y size (usually same as X)
+    const density = 100; 
+    const jumpThreshold = 15.0; 
+    // ----------------------------------
     
-    let gcode = ['G90', 'G21', 'G1 F1000'];
+    let gcode = ['G90', 'G21', 'G1 F1500'];
     
-    // 1. Collect all "draw points" (Black pixels)
+    // 1. Collect all "draw points"
     let points = [];
     const step = Math.max(1, Math.floor(width / density));
     
-    const scaleX = tableSize / width;
-    const scaleY = tableSize / height;
+    const scaleX = tableWidth / width;
+    const scaleY = tableHeight / height;
 
     for (let y = 0; y < height; y += step) {
         for (let x = 0; x < width; x += step) {
             const idx = (Math.floor(y) * width + Math.floor(x)) * 4;
             const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
             
-            // Check if this pixel is "Black" (or White if inverted)
             const isTarget = invert ? (brightness > threshold) : (brightness < threshold);
             
             if (isTarget) {
-                // Flip Y for Cartesian coordinates (0 at bottom)
                 points.push({
                     x: x * scaleX,
                     y: (height - y) * scaleY,
@@ -318,30 +317,25 @@
         }
     }
 
-    // 2. Connect the dots (Greedy Nearest Neighbor)
+    // 2. Connect the dots
     let currentX = 0;
-    let currentY = 180; // Start at Home (Top-Left usually)
+    let currentY = tableHeight; // Start at Home (Top-Left)
     let pointsRemaining = points.length;
 
-    // Optimization: processing thousands of points can be slow.
-    // We loop until all points are visited.
     while (pointsRemaining > 0) {
         let minDist = Infinity;
         let nearestIdx = -1;
 
-        // Find the closest unvisited point
-        // (Simple optimization: don't search the whole array if we find something really close)
         for (let i = 0; i < points.length; i++) {
             if (points[i].visited) continue;
 
             const dx = points[i].x - currentX;
             const dy = points[i].y - currentY;
-            const distSq = dx*dx + dy*dy; // Use squared distance to avoid square roots (faster)
+            const distSq = dx*dx + dy*dy; 
 
             if (distSq < minDist) {
                 minDist = distSq;
                 nearestIdx = i;
-                // If we found a neighbor immediately next to us (< 2mm), take it instantly
                 if (distSq < 4) break; 
             }
         }
@@ -352,34 +346,27 @@
 
             // 3. MOVEMENT LOGIC
             if (dist > jumpThreshold) {
-                // If the next point is far away, it means we are jumping over whitespace.
-                // Go to the perimeter to hide the travel line.
+                // Determine nearest wall dynamically based on tableWidth
+                let wallX = currentX > (tableWidth / 2) ? tableWidth : 0;
                 
-                // A. Go to nearest wall from CURRENT position
-                let wallX = currentX > 90 ? 180 : 0;
                 gcode.push(`G1 X${wallX} Y${currentY.toFixed(2)}`);
-                
-                // B. Slide along wall to NEW Y height
                 gcode.push(`G1 X${wallX} Y${p.y.toFixed(2)}`);
-                
-                // C. Enter into the new shape
                 gcode.push(`G1 X${p.x.toFixed(2)} Y${p.y.toFixed(2)}`);
             } else {
-                // If it's close, just draw straight to it (continuous filling)
                 gcode.push(`G1 X${p.x.toFixed(2)} Y${p.y.toFixed(2)}`);
             }
 
-            // Update state
             currentX = p.x;
             currentY = p.y;
             points[nearestIdx].visited = true;
             pointsRemaining--;
         } else {
-            break; // Should not happen if pointsRemaining > 0
+            break; 
         }
     }
 
-    gcode.push('G1 X0 Y180'); // Go Home
+    // Go Home (Using dynamic height)
+    gcode.push(`G1 X0 Y${tableHeight}`); 
     gcode.push('M30');
     
     return gcode.join('\n');
@@ -395,7 +382,7 @@
         gcodePathCtx.beginPath();
 
         const lines = gcode.split('\n');
-        const scale = gcodePathCanvas.width / 180;
+        const scale = gcodePathCanvas.width / 370;
         let curX = 0, curY = 0;
 
         for (let line of lines) {
