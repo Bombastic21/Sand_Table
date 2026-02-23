@@ -341,7 +341,7 @@
         description: "Parallel lines to smooth the sand",
         generate: function() {
             let strokes = [];
-            const lineSpacing = 5; 
+            const lineSpacing = 15; 
             
             // Generate horizontal lines across entire 370mm table
             for (let y = 0; y <= TABLE_SIZE; y += lineSpacing) {
@@ -566,7 +566,7 @@
                 for (let i = 1; i < stroke.length; i++) {
                     x = stroke[i].x;
                     y = stroke[i].y;
-                    gcode.push(`G1 X${x.toFixed(2)} Y${y.toFixed(2)} F1000`);
+                    gcode.push(`G1 X${x.toFixed(2)} Y${y.toFixed(2)} F1500`);
                 }
             }
 
