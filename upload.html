@@ -170,6 +170,11 @@
                 Invert (draw bright areas instead of dark)
             </label>
         </div>
+        <div>
+            <label>Draw Speed (mm/min): 
+                <input type="number" id="speedInput" min="100" max="10000" value="1500" step="100" style="padding: 5px; width: 80px;">
+            </label>
+        </div>
 
         <button id="convertBtn">Convert to G-Code</button>
     </div>
@@ -211,6 +216,7 @@
     const gcodePathCanvas = document.getElementById('gcodePathCanvas');
     const gcodePathCtx = gcodePathCanvas.getContext('2d');
     const gcodePreview = document.getElementById('gcodePreview');
+    const speedInput = document.getElementById('speedInput');
 
     let currentImageData = null;
     let generatedGCode = '';
@@ -260,7 +266,11 @@
         }
         const threshold = parseInt(thresholdSlider.value);
         const invert = invertCheckbox.checked;
-        generatedGCode = imageToGCode(currentImageData, threshold, invert);
+        const speed = parseInt(speedInput.value); // Grab the speed from the box
+        
+        // Pass the speed variable into the function
+        generatedGCode = imageToGCode(currentImageData, threshold, invert, speed); 
+        
         gcodePreview.value = generatedGCode;
         gcodePreview.classList.add('active');
         drawGCodePreview(generatedGCode);
@@ -279,7 +289,7 @@
 
     backBtn.addEventListener('click', () => window.location.href = 'index.html');
 
-    function imageToGCode(imageData, threshold, invert = false) {
+    function imageToGCode(imageData, threshold, invert = false, speed = 1500) {
     const width = imageData.width;
     const height = imageData.height;
     const data = imageData.data;
@@ -287,11 +297,11 @@
     // --- SETTINGS: ADJUST SIZE HERE ---
     const tableWidth = 370;  // Change this to your X size
     const tableHeight = 370; // Change this to your Y size (usually same as X)
-    const density = 50; 
+    const density = 75; 
     const jumpThreshold = 15.0; 
     // ----------------------------------
     
-    let gcode = ['G90', 'G21', 'G1 F1500'];
+    let gcode = ['G90', 'G21', `G1 F${speed}`];
     
     // 1. Collect all "draw points"
     let points = [];
