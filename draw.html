@@ -479,21 +479,33 @@
             const offsetX = 0;
             const offsetY = 0;
 
+            // --- AXIS FLIP TOGGLES ---
+            // Adjust these to true/false to match your physical sand table's orientation
+            const flipX = false; // Set to false to stop X from flipping
+            const flipY = true;  // Set to true to keep Y flipped
+
+            // Helper functions to handle coordinate scaling and flipping
+            function getX(canvasX) {
+                let x = canvasX * scale + offsetX;
+                return flipX ? tableSize - x : x;
+            }
+
+            function getY(canvasY) {
+                let y = canvasY * scale + offsetY;
+                return flipY ? tableSize - y : y;
+            }
+
             // Add drawing strokes
             for (let stroke of strokes) {
                 if (stroke.length === 0) continue;
 
-                let x = stroke[0].x * scale + offsetX;
-                let y = stroke[0].y * scale + offsetY;
-                x = Math.min(Math.max(x, 0), tableSize);
-                y = Math.min(Math.max(y, 0), tableSize);
+                let x = Math.min(Math.max(getX(stroke[0].x), 0), tableSize);
+                let y = Math.min(Math.max(getY(stroke[0].y), 0), tableSize);
                 gcode.push(`G0 X${x.toFixed(2)} Y${y.toFixed(2)}`);
 
                 for (let i = 1; i < stroke.length; i++) {
-                    x = stroke[i].x * scale + offsetX;
-                    y = stroke[i].y * scale + offsetY;
-                    x = Math.min(Math.max(x, 0), tableSize);
-                    y = Math.min(Math.max(y, 0), tableSize);
+                    x = Math.min(Math.max(getX(stroke[i].x), 0), tableSize);
+                    y = Math.min(Math.max(getY(stroke[i].y), 0), tableSize);
                     gcode.push(`G1 X${x.toFixed(2)} Y${y.toFixed(2)} F1000`);
                 }
             }
@@ -509,18 +521,14 @@
                     if(fontData[char]) {
                         for(let line of fontData[char]) {
                             // Move to start of letter segment
-                            let lx = (cursorX + line[0] * txtScale) * scale + offsetX;
-                            let ly = (textElem.y + line[1] * txtScale) * scale + offsetY;
-                            lx = Math.min(Math.max(lx, 0), tableSize);
-                            ly = Math.min(Math.max(ly, 0), tableSize);
+                            let lx = Math.min(Math.max(getX(cursorX + line[0] * txtScale), 0), tableSize);
+                            let ly = Math.min(Math.max(getY(textElem.y + line[1] * txtScale), 0), tableSize);
                             gcode.push(`G0 X${lx.toFixed(2)} Y${ly.toFixed(2)}`);
 
                             // Draw the segment
                             for(let k=2; k<line.length; k+=2) {
-                                lx = (cursorX + line[k] * txtScale) * scale + offsetX;
-                                ly = (textElem.y + line[k+1] * txtScale) * scale + offsetY;
-                                lx = Math.min(Math.max(lx, 0), tableSize);
-                                ly = Math.min(Math.max(ly, 0), tableSize);
+                                lx = Math.min(Math.max(getX(cursorX + line[k] * txtScale), 0), tableSize);
+                                ly = Math.min(Math.max(getY(textElem.y + line[k+1] * txtScale), 0), tableSize);
                                 gcode.push(`G1 X${lx.toFixed(2)} Y${ly.toFixed(2)} F1000`);
                             }
                         }
