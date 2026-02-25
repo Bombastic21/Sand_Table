@@ -337,23 +337,36 @@
         }
     },
     {
-        name: "Reset",
-        description: "Parallel lines to smooth the sand",
-        generate: function() {
-            let strokes = [];
-            const lineSpacing = 15; 
+    name: "Reset",
+    description: "Continuous zig-zag lines to smooth the sand",
+    generate: function() {
+        let singleStroke = [];
+        const lineSpacing = 10; 
+        let goingRight = true;
+        
+        // Generate a continuous path across entire 370mm table
+        for (let y = 0; y <= TABLE_SIZE; y += lineSpacing) {
             
-            // Generate horizontal lines across entire 370mm table
-            for (let y = 0; y <= TABLE_SIZE; y += lineSpacing) {
-                let line = [];
+            if (goingRight) {
+                // Draw left to right
                 for (let x = 0; x <= TABLE_SIZE; x += 2) {
-                    line.push({ x, y });
+                    singleStroke.push({ x, y });
                 }
-                strokes.push(line);
+            } else {
+                // Draw right to left
+                for (let x = TABLE_SIZE; x >= 0; x -= 2) {
+                    singleStroke.push({ x, y });
+                }
             }
-            return strokes;
+            
+            // Flip the direction for the next row
+            goingRight = !goingRight; 
         }
-    },
+        
+        // Return as a single continuous stroke to prevent G0 jumps
+        return [singleStroke];
+    }
+},
     {
         name: "Sunburst",
         description: "Radial lines emanating from center",
