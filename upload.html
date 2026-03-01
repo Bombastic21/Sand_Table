@@ -318,18 +318,18 @@
             const isTarget = invert ? (brightness > threshold) : (brightness < threshold);
             
             if (isTarget) {
-                points.push({
-                    x: x * scaleX,
-                    y: (height - y) * scaleY,
-                    visited: false
-                });
-            }
+    points.push({
+        x: x * scaleX,
+        y: y * scaleY, // <--- Removed (height - y)
+        visited: false
+    });
+}
         }
     }
 
     // 2. Connect the dots
     let currentX = 0;
-    let currentY = tableHeight; // Start at Home (Top-Left)
+    let currentY = 0; // Start at Home (Top-Left)
     let pointsRemaining = points.length;
 
     while (pointsRemaining > 0) {
