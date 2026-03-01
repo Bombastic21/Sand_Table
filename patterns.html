@@ -119,8 +119,8 @@
             const centerX = CENTER, centerY = CENTER;
             const maxRadius = MAX_R;
             // Increased loops slightly to fill the larger space
-            for (let angle = 0; angle < Math.PI * 60; angle += 0.05) {
-                const radius = (angle / (Math.PI * 60)) * maxRadius;
+            for (let angle = 0; angle < Math.PI * (237/4); angle += 0.05) {
+                const radius = (angle / (Math.PI * (237/4))) * maxRadius;
                 const x = centerX + radius * Math.cos(angle);
                 const y = centerY + radius * Math.sin(angle);
                 points.push({ x, y });
