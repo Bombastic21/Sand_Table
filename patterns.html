@@ -148,6 +148,154 @@
         }
     },
     {
+    name: "Reset",
+    description: "Continuous zig-zag lines to smooth the sand",
+    generate: function() {
+        let singleStroke = [];
+        const lineSpacing = 10; 
+        const maxY = 360; // Hard-coded stopping point for the Y axis
+        let goingRight = true;
+        
+        // Generate a continuous path up to y = 360
+        for (let y = 0; y <= maxY; y += lineSpacing) {
+            
+            if (goingRight) {
+                // Draw left to right
+                for (let x = 0; x <= TABLE_SIZE; x += 2) {
+                    singleStroke.push({ x, y });
+                }
+            } else {
+                // Draw right to left
+                for (let x = TABLE_SIZE; x >= 0; x -= 2) {
+                    singleStroke.push({ x, y });
+                }
+            }
+            
+            // Flip the direction for the next row
+            goingRight = !goingRight; 
+        }
+        // Final move: travel straight down the right edge to 370, 0
+        singleStroke.push({ x: 370, y: 0 });
+        // Return as a single continuous stroke to prevent G0 jumps
+        return [singleStroke]; 
+    }
+},
+ {
+        name: "Cross",
+        description: "Traditional Latin cross pattern",
+        generate: function() {
+            let strokes = [];
+            
+            // --- Configuration for 370x370 Table ---
+            const thick = 40;        // Thickness of the bars
+            const cx = CENTER;       // 185
+            
+            // Define fixed boundary lines to create the Latin Cross shape
+            // Top of the cross (near the top of table)
+            const vTop = 40;        
+            // Bottom of the cross (near bottom of table)
+            const vBottom = 330;    
+            
+            // The Horizontal Arm (Placed higher up at y=110 to y=150)
+            const hTop = 110;
+            const hBottom = hTop + thick;
+            const hLeft = 55;       // Left edge of arm
+            const hRight = 315;     // Right edge of arm
+
+            // The Vertical Bar Width
+            const vLeft = cx - (thick / 2);
+            const vRight = cx + (thick / 2);
+
+            let outline = [];
+
+            // 1. Top Edge
+            for (let x = vLeft; x <= vRight; x += 2) outline.push({ x, y: vTop });
+
+            // 2. Vertical Bar (Right Side - Top section)
+            for (let y = vTop; y <= hTop; y += 2) outline.push({ x: vRight, y });
+
+            // 3. Horizontal Arm (Right Arm - Top edge)
+            for (let x = vRight; x <= hRight; x += 2) outline.push({ x, y: hTop });
+
+            // 4. Horizontal Arm (Right Edge)
+            for (let y = hTop; y <= hBottom; y += 2) outline.push({ x: hRight, y });
+
+            // 5. Horizontal Arm (Right Arm - Bottom edge)
+            for (let x = hRight; x >= vRight; x -= 2) outline.push({ x, y: hBottom });
+
+            // 6. Vertical Bar (Right Side - Bottom section - The long part)
+            for (let y = hBottom; y <= vBottom; y += 2) outline.push({ x: vRight, y });
+
+            // 7. Bottom Edge
+            for (let x = vRight; x >= vLeft; x -= 2) outline.push({ x, y: vBottom });
+
+            // 8. Vertical Bar (Left Side - Bottom section)
+            for (let y = vBottom; y >= hBottom; y -= 2) outline.push({ x: vLeft, y });
+
+            // 9. Horizontal Arm (Left Arm - Bottom edge)
+            for (let x = vLeft; x >= hLeft; x -= 2) outline.push({ x, y: hBottom });
+
+            // 10. Horizontal Arm (Left Edge)
+            for (let y = hBottom; y >= hTop; y -= 2) outline.push({ x: hLeft, y });
+
+            // 11. Horizontal Arm (Left Arm - Top edge)
+            for (let x = hLeft; x <= vLeft; x += 2) outline.push({ x, y: hTop });
+
+            // 12. Vertical Bar (Left Side - Top section)
+            for (let y = hTop; y >= vTop; y -= 2) outline.push({ x: vLeft, y });
+
+            strokes.push(outline);
+            return strokes;
+        }
+    },
+    {
+    name: "Interlocking Wavy Spiral",
+    description: "A continuous spiraling sine wave that creates an interlocking optical illusion",
+    generate: function() {
+        let singleStroke = [];
+        const TABLE_SIZE = 370; 
+        const centerX = TABLE_SIZE / 2; // 185
+        const centerY = TABLE_SIZE / 2; // 185
+        const maxRadius = (TABLE_SIZE / 2) - 2; // -2mm to keep the ball from hitting the very edge
+        
+        // --- PATTERN SETTINGS ---
+        // Tweak these to change the look of the sand!
+        const revolutions = 19.625;      // How many times the spiral loops around the center
+        const wigglesPerRev = 40.1; // Number of wave peaks per loop. Decimals like .25 or .5 create the swirl effect!
+        const maxAmplitude = 5;    // How wide the wave wiggles (in mm)
+        
+        const maxTheta = revolutions * 2 * Math.PI;
+        const thetaStep = 0.02; // Resolution of the curve. Lower is smoother, but creates more G-code
+        
+        // Generate the continuous path from the center outward
+        for (let theta = 0; theta <= maxTheta; theta += thetaStep) {
+            
+            // 1. Calculate the base expanding spiral
+            let progress = theta / maxTheta; 
+            let baseRadius = progress * maxRadius;
+            
+            // 2. Calculate the wave size. 
+            // We scale the amplitude by 'progress' so it starts as a tiny wiggle in the 
+            // center and grows to the maxAmplitude at the edge. This prevents the ball 
+            // from making a messy, overlapping knot right in the middle.
+            let currentAmplitude = maxAmplitude * progress;
+            
+            // 3. Combine them
+            let r = baseRadius + (currentAmplitude * Math.sin(theta * wigglesPerRev));
+            
+            // 4. Convert polar coordinates (radius/angle) back to Cartesian (X/Y)
+            let x = centerX + r * Math.cos(theta);
+            let y = centerY + r * Math.sin(theta);
+            
+            singleStroke.push({ x: x, y: y });
+        }
+        
+        
+        
+        return [singleStroke];
+    }
+},
+    {
         name: "Grid",
         description: "A geometric grid pattern",
         generate: function() {
@@ -268,105 +416,8 @@
             return strokes;
         }
     },
-    {
-        name: "Cross",
-        description: "Traditional Latin cross pattern",
-        generate: function() {
-            let strokes = [];
-            
-            // --- Configuration for 370x370 Table ---
-            const thick = 40;        // Thickness of the bars
-            const cx = CENTER;       // 185
-            
-            // Define fixed boundary lines to create the Latin Cross shape
-            // Top of the cross (near the top of table)
-            const vTop = 40;        
-            // Bottom of the cross (near bottom of table)
-            const vBottom = 330;    
-            
-            // The Horizontal Arm (Placed higher up at y=110 to y=150)
-            const hTop = 110;
-            const hBottom = hTop + thick;
-            const hLeft = 55;       // Left edge of arm
-            const hRight = 315;     // Right edge of arm
-
-            // The Vertical Bar Width
-            const vLeft = cx - (thick / 2);
-            const vRight = cx + (thick / 2);
-
-            let outline = [];
-
-            // 1. Top Edge
-            for (let x = vLeft; x <= vRight; x += 2) outline.push({ x, y: vTop });
-
-            // 2. Vertical Bar (Right Side - Top section)
-            for (let y = vTop; y <= hTop; y += 2) outline.push({ x: vRight, y });
-
-            // 3. Horizontal Arm (Right Arm - Top edge)
-            for (let x = vRight; x <= hRight; x += 2) outline.push({ x, y: hTop });
-
-            // 4. Horizontal Arm (Right Edge)
-            for (let y = hTop; y <= hBottom; y += 2) outline.push({ x: hRight, y });
-
-            // 5. Horizontal Arm (Right Arm - Bottom edge)
-            for (let x = hRight; x >= vRight; x -= 2) outline.push({ x, y: hBottom });
-
-            // 6. Vertical Bar (Right Side - Bottom section - The long part)
-            for (let y = hBottom; y <= vBottom; y += 2) outline.push({ x: vRight, y });
-
-            // 7. Bottom Edge
-            for (let x = vRight; x >= vLeft; x -= 2) outline.push({ x, y: vBottom });
-
-            // 8. Vertical Bar (Left Side - Bottom section)
-            for (let y = vBottom; y >= hBottom; y -= 2) outline.push({ x: vLeft, y });
-
-            // 9. Horizontal Arm (Left Arm - Bottom edge)
-            for (let x = vLeft; x >= hLeft; x -= 2) outline.push({ x, y: hBottom });
-
-            // 10. Horizontal Arm (Left Edge)
-            for (let y = hBottom; y >= hTop; y -= 2) outline.push({ x: hLeft, y });
-
-            // 11. Horizontal Arm (Left Arm - Top edge)
-            for (let x = hLeft; x <= vLeft; x += 2) outline.push({ x, y: hTop });
-
-            // 12. Vertical Bar (Left Side - Top section)
-            for (let y = hTop; y >= vTop; y -= 2) outline.push({ x: vLeft, y });
-
-            strokes.push(outline);
-            return strokes;
-        }
-    },
-    {
-    name: "Reset",
-    description: "Continuous zig-zag lines to smooth the sand",
-    generate: function() {
-        let singleStroke = [];
-        const lineSpacing = 10; 
-        let goingRight = true;
-        
-        // Generate a continuous path across entire 370mm table
-        for (let y = 0; y <= TABLE_SIZE; y += lineSpacing) {
-            
-            if (goingRight) {
-                // Draw left to right
-                for (let x = 0; x <= TABLE_SIZE; x += 2) {
-                    singleStroke.push({ x, y });
-                }
-            } else {
-                // Draw right to left
-                for (let x = TABLE_SIZE; x >= 0; x -= 2) {
-                    singleStroke.push({ x, y });
-                }
-            }
-            
-            // Flip the direction for the next row
-            goingRight = !goingRight; 
-        }
-        
-        // Return as a single continuous stroke to prevent G0 jumps
-        return [singleStroke];
-    }
-},
+   
+    
     {
         name: "Sunburst",
         description: "Radial lines emanating from center",
