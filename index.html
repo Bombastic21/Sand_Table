@@ -11,7 +11,40 @@
             min-height: 100vh;
             margin: 0;
             background-color: #f0f0f0;
+            font-family: sans-serif;
         }
+
+        /* --- New Top Right Light Controls --- */
+        .top-right-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .light-btn {
+            /* Overriding the large global button styles for this specific button */
+            width: auto;
+            height: auto;
+            padding: 12px 24px;
+            flex-direction: row; /* Puts the icon and text side-by-side */
+            font-size: 16px;
+            background-color: #f39c12; /* Warm yellow/orange to represent lights */
+            gap: 8px;
+        }
+
+        .light-btn:hover {
+            background-color: #e67e22;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+
+        #colorPicker {
+            /* Hides the default ugly browser color picker input */
+            display: none; 
+        }
+        /* ------------------------------------ */
 
         h1 {
             font-size: 60px;
@@ -27,6 +60,7 @@
             justify-content: center;
         }
 
+        /* Global styles for your main menu buttons */
         button {
             padding: 0;
             font-size: 18px;
@@ -63,6 +97,14 @@
     </style>
 </head>
 <body>
+    
+    <div class="top-right-controls">
+        <button class="light-btn" onclick="document.getElementById('colorPicker').click()">
+            💡 <span class="button-text">Light Color</span>
+        </button>
+        <input type="color" id="colorPicker" onchange="sendColorToESP32(this.value)">
+    </div>
+
     <h1>Sand Table</h1>
 
     <div class="button-container">
@@ -79,5 +121,28 @@
             <div class="button-text">Image</div>
         </button>
     </div>
+
+    <script>
+        // REPLACE THIS with the IP address printed in your ESP32 Serial Monitor
+        const esp32_ip = "192.168.1.50"; 
+
+        function sendColorToESP32(hex) {
+            // Convert Hex (e.g., #ffffff) to RGB integers
+            const r = parseInt(hex.substring(1, 3), 16);
+            const g = parseInt(hex.substring(3, 5), 16);
+            const b = parseInt(hex.substring(5, 7), 16);
+
+            console.log(`Sending RGB to ESP32: ${r}, ${g}, ${b}`);
+
+            // Send the request to the ESP32 via Fetch API
+            fetch(`http://${esp32_ip}/setColor?r=${r}&g=${g}&b=${b}`, { mode: 'no-cors' })
+                .then(() => {
+                    console.log("Color command sent successfully!");
+                })
+                .catch(err => {
+                    console.error("Failed to reach ESP32. Ensure both devices are on the same Wi-Fi.", err);
+                });
+        }
+    </script>
 </body>
 </html>
